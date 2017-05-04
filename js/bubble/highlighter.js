@@ -9,6 +9,17 @@ BubbleHighlighter.prototype = {
             autoCloseTags:  true,
             wysiwygEnabled: false
         }, options || {});
+
+        // Refresh highlighter when changing tabs, for instance on the CMS page
+        document.observe('dom:loaded', function() {
+            $$('.tab-item-link').each(function (element) {
+                element.observe('click', function () {
+                    $$('.CodeMirror').each(function (element) {
+                        element.CodeMirror.refresh();
+                    });
+                });
+            });
+        });
     },
     setup: function(cm, textarea) {
         // Update doc content
@@ -24,6 +35,7 @@ BubbleHighlighter.prototype = {
         }.bind(this));
     },
     create: function(textarea, mode) {
+
         if (!textarea || !textarea.id || textarea.hasClassName('bubble')) return;
 
         if (!mode) {
@@ -74,18 +86,20 @@ BubbleHighlighter.prototype = {
 
         // Handle insert widget and image buttons
         varienGlobalEvents.attachEventHandler('tinymceChange', function() {
-            var content = '';
-            if (typeof(tinyMCE) !== 'undefined' && tinyMCE.activeEditor) {
-                content = tinyMCE.activeEditor.getContent();
-            } else {
-                content = textarea.value;
+            if (!tinyMCE.activeEditor || textarea.id === tinyMCE.activeEditor.id) {
+                var content = '';
+                if (typeof(tinyMCE) !== 'undefined' && tinyMCE.activeEditor) {
+                    content = tinyMCE.activeEditor.getContent();
+                } else {
+                    content = textarea.value;
+                }
+                var wysiwyg = window['wysiwyg' + baseId];
+                if (wysiwyg && typeof(wysiwyg) !== 'undefined') {
+                    content = wysiwyg.decodeDirectives(content);
+                    content = wysiwyg.decodeWidgets(content);
+                }
+                cm.getDoc().setValue(content);
             }
-            var wysiwyg = window['wysiwyg' + baseId];
-            if (wysiwyg && typeof(wysiwyg) !== 'undefined') {
-                content = wysiwyg.decodeDirectives(content);
-                content = wysiwyg.decodeWidgets(content);
-            }
-            cm.getDoc().setValue(content);
         });
 
         // Handle insert variable button
